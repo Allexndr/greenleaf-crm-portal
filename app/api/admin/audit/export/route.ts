@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Prepare data for Excel
-    const excelData = auditLogs.map((log, index) => ({
+    const excelData = auditLogs.map((log: any, index: number) => ({
       '№': index + 1,
       'Дата': new Date(log.createdAt).toLocaleDateString('ru-RU'),
       'Время': new Date(log.createdAt).toLocaleTimeString('ru-RU'),

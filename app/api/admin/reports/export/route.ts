@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        excelData = applications.map((app, index) => ({
+        excelData = applications.map((app: any, index: number) => ({
           '№': index + 1,
           'ID заявки': app.applicationNumber,
           'Дата подачи': new Date(app.createdAt).toLocaleDateString('ru-RU'),
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        excelData = statusData.map((item, index) => ({
+        excelData = statusData.map((item: any, index: number) => ({
           '№': index + 1,
           'Статус': getStatusLabel(item.status),
           'Количество': item._count.status,
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        excelData = paymentData.map((item, index) => ({
+        excelData = paymentData.map((item: any, index: number) => ({
           '№': index + 1,
           'Способ оплаты': getPaymentMethodLabel(item.paymentMethod as any),
           'Количество': item._count.paymentMethod,
@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        excelData = serviceCenters.map((sc, index) => ({
+        excelData = serviceCenters.map((sc: any, index: number) => ({
           '№': index + 1,
           'Номер': sc.number,
           'Описание': sc.description,
@@ -197,7 +197,7 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        excelData = managers.map((manager, index) => ({
+        excelData = managers.map((manager: any, index: number) => ({
           '№': index + 1,
           'Email': manager.email,
           'Сервисный центр': manager.serviceCenter ? `${manager.serviceCenter.number} - ${manager.serviceCenter.description}` : '-',
@@ -220,7 +220,7 @@ export async function GET(request: NextRequest) {
           ORDER BY month DESC
         ` as Array<{ month: string; count: number }>;
 
-        excelData = monthlyData.map((item, index) => ({
+        excelData = monthlyData.map((item: any, index: number) => ({
           '№': index + 1,
           'Месяц': item.month,
           'Количество заявок': Number(item.count),

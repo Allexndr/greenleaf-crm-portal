@@ -11,6 +11,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Skip during build time
+    if (process.env.NODE_ENV === 'production' && !request.headers.get('host')) {
+      return createErrorResponse('Service unavailable during build', 503);
+    }
     // Try to get user from headers first (from middleware)
     let user = getCurrentUser(request);
     

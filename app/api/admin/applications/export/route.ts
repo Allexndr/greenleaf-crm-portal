@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Prepare data for Excel
-    const excelData = applications.map((app, index) => ({
+    const excelData = applications.map((app: any, index: number) => ({
       '№': index + 1,
       'ID заявки': app.applicationNumber,
       'Дата подачи': new Date(app.createdAt).toLocaleDateString('ru-RU'),

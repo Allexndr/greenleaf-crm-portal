@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Get service center details
-    const serviceCenterIds = applicationsByServiceCenter.map(item => item.serviceCenterId);
+    const serviceCenterIds = applicationsByServiceCenter.map((item: any) => item.serviceCenterId);
     const serviceCenters = await prisma.serviceCenter.findMany({
       where: {
         id: {
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const applicationsByServiceCenterWithDetails = applicationsByServiceCenter.map(item => ({
+    const applicationsByServiceCenterWithDetails = applicationsByServiceCenter.map((item: any) => ({
       serviceCenter: serviceCenters.find(sc => sc.id === item.serviceCenterId) || {
         number: 'Unknown',
         description: 'Unknown',
