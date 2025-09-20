@@ -1,6 +1,6 @@
 import { MongoClient, Db } from 'mongodb';
 
-const uri = process.env.MONGODB_URI || "mongodb+srv://sanmemik2000:tgDP9U6B5v95gzJ4@cluster0.aism76i.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const uri = process.env.MONGODB_URI || "mongodb+srv://sanmemik2000:26QMCmGwIwPsebvp@cluster0.aism76i.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const dbName = process.env.MONGODB_DB || "greenleaf";
 
 let client: MongoClient;

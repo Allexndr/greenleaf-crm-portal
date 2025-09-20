@@ -57,6 +57,33 @@ export default function AdminLoginPage() {
     }
   };
 
+  const handleQuickLogin = async (email: string, password: string) => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/auth/quick-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast.success(`Вход как ${email.includes('admin') ? 'Админ' : 'Менеджер'} выполнен успешно`);
+        router.push('/admin');
+      } else {
+        toast.error(result.error || 'Ошибка входа');
+      }
+    } catch (error) {
+      console.error('Quick login error:', error);
+      toast.error('Ошибка входа');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
@@ -107,16 +134,32 @@ export default function AdminLoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Тестовые данные:
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              admin@greenleaf.kz / admin123
-            </p>
-            <p className="text-xs text-gray-500">
-              manager@greenleaf.kz / manager123
-            </p>
+          <div className="mt-6 space-y-3">
+            <div className="text-center">
+              <p className="text-sm text-gray-600 mb-3">
+                Быстрый вход:
+              </p>
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => handleQuickLogin('admin@greenleaf.kz', 'admin123')}
+                  disabled={loading}
+                >
+                  Войти как Админ
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => handleQuickLogin('manager@greenleaf.kz', 'manager123')}
+                  disabled={loading}
+                >
+                  Войти как Менеджер
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
