@@ -102,7 +102,7 @@ export default function ApplicationsManagementPage() {
         throw new Error('Failed to fetch managers');
       }
       const data = await response.json();
-      setManagers(data);
+      setManagers(Array.isArray(data) ? data : []);
     } catch (error: any) {
       toast.error(error.message || 'Ошибка при загрузке менеджеров');
     }
