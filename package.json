@@ -13,7 +13,8 @@
     "db:studio": "prisma studio",
     "db:init": "node scripts/init-db.js",
     "mongodb:init": "node scripts/init-mongodb.js",
-    "mongodb:users": "node scripts/init-users-mongodb.js"
+    "mongodb:users": "node scripts/init-users-mongodb.js",
+    "vercel:init": "node scripts/init-vercel-users.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
