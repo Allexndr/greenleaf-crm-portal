@@ -1,7 +1,7 @@
 const { MongoClient } = require('mongodb');
 
 // Замените на вашу строку подключения после создания пользователя
-const uri = "mongodb+srv://greenleaf_user:Greenleaf2024!@cluster0.aism76i.mongodb.net/greenleaf?retryWrites=true&w=majority&appName=Cluster0";
+const uri = process.env.MONGODB_URI || "mongodb+srv://greenleaf_user:Greenleaf2024!@cluster0.aism76i.mongodb.net/greenleaf?retryWrites=true&w=majority&appName=Cluster0";
 
 async function testConnection() {
   const client = new MongoClient(uri);
