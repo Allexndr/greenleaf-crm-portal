@@ -20,6 +20,7 @@ export interface GreenleafResponse {
   success: boolean;
   login?: string;
   password?: string;
+  orderId?: string;
   error?: string;
   message?: string;
 }

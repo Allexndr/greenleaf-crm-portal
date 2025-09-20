@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createErrorResponse, getCurrentUser } from '@/lib/api-helpers';
+import { verifyToken } from '@/lib/auth';
 import { ApplicationStatus, PaymentMethod, getStatusLabel, getPaymentMethodLabel, getPlacementAreaLabel } from '@/lib/types';
 import * as XLSX from 'xlsx';
 
@@ -121,7 +122,7 @@ export async function GET(request: NextRequest) {
           'Статус': getStatusLabel(item.status),
           'Количество': item._count.status,
         }));
-        filename = `status_report_${new Date().toISOString().split('T')[0]}.xlsx';
+        filename = `status_report_${new Date().toISOString().split('T')[0]}.xlsx`;
         break;
 
       case 'payment':
@@ -138,7 +139,7 @@ export async function GET(request: NextRequest) {
           'Способ оплаты': getPaymentMethodLabel(item.paymentMethod as any),
           'Количество': item._count.paymentMethod,
         }));
-        filename = `payment_report_${new Date().toISOString().split('T')[0]}.xlsx';
+        filename = `payment_report_${new Date().toISOString().split('T')[0]}.xlsx`;
         break;
 
       case 'service-centers':
@@ -168,7 +169,7 @@ export async function GET(request: NextRequest) {
           'Дата создания': new Date(sc.createdAt).toLocaleDateString('ru-RU'),
           'Дата обновления': new Date(sc.updatedAt).toLocaleDateString('ru-RU'),
         }));
-        filename = `service_centers_report_${new Date().toISOString().split('T')[0]}.xlsx';
+        filename = `service_centers_report_${new Date().toISOString().split('T')[0]}.xlsx`;
         break;
 
       case 'managers':
@@ -202,7 +203,7 @@ export async function GET(request: NextRequest) {
           'Статус': manager.isActive ? 'Активен' : 'Неактивен',
           'Дата создания': new Date(manager.createdAt).toLocaleDateString('ru-RU'),
         }));
-        filename = `managers_report_${new Date().toISOString().split('T')[0]}.xlsx';
+        filename = `managers_report_${new Date().toISOString().split('T')[0]}.xlsx`;
         break;
 
       case 'monthly':
@@ -222,7 +223,7 @@ export async function GET(request: NextRequest) {
           'Месяц': item.month,
           'Количество заявок': Number(item.count),
         }));
-        filename = `monthly_report_${new Date().toISOString().split('T')[0]}.xlsx';
+        filename = `monthly_report_${new Date().toISOString().split('T')[0]}.xlsx`;
         break;
 
       default:

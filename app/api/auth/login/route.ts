@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const isValidPassword = await verifyPassword(body.password, user.password);
     if (!isValidPassword) {
       // Log failed login attempt
-      const auditLogger = createAuditLogger('unknown', undefined, getClientIP(request), getUserAgent(request));
+      const auditLogger = createAuditLogger('unknown', undefined, request);
       await auditLogger.logLogin(false, 'Invalid password');
       
       return createErrorResponse('Неверные учетные данные', 401);
@@ -54,12 +54,12 @@ export async function POST(request: NextRequest) {
     const token = generateToken({
       userId: user.id,
       email: user.email,
-      role: user.role,
-      serviceCenterId: user.serviceCenterId,
+      role: user.role as any,
+      serviceCenterId: user.serviceCenterId || undefined,
     });
 
     // Log successful login
-    const auditLogger = createAuditLogger(user.id, user.serviceCenterId, getClientIP(request), getUserAgent(request));
+    const auditLogger = createAuditLogger(user.id, user.serviceCenterId || undefined, request);
     await auditLogger.logLogin(true);
 
     // Create response with token in cookie

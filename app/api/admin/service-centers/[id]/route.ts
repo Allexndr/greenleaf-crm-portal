@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createApiResponse, createErrorResponse, getCurrentUser, validateRequiredFields } from '@/lib/api-helpers';
+import { verifyToken } from '@/lib/auth';
 import { generateUniqueLink } from '@/lib/utils';
 import { createAuditLogger, getClientIP, getUserAgent } from '@/lib/audit';
 

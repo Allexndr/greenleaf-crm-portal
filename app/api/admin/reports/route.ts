@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Get manager details
-    const managerIds = topManagers.map(item => item.managerId).filter(Boolean);
+    const managerIds = topManagers.map(item => item.managerId).filter((id): id is string => id !== null);
     const managers = await prisma.user.findMany({
       where: {
         id: {

@@ -38,7 +38,17 @@ export function generateGreenleafLogin(): string {
   return `kz${random}`;
 }
 
-export function formatDate(date: Date): string {
+export function formatDate(date: Date, format?: string): string {
+  if (format === 'DD.MM.YYYY HH:mm') {
+    return new Intl.DateTimeFormat('ru-RU', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  }
+  
   return new Intl.DateTimeFormat('ru-RU', {
     year: 'numeric',
     month: '2-digit',
