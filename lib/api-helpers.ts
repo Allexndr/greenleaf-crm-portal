@@ -43,6 +43,7 @@ export function validateEmail(email: string): boolean {
 
 export function validatePhone(phone: string): boolean {
   const cleaned = phone.replace(/\D/g, '');
-  return cleaned.startsWith('8') && cleaned.length === 11;
+  return (cleaned.startsWith('8') && cleaned.length === 11) || 
+         (cleaned.startsWith('7') && cleaned.length === 11);
 }
 

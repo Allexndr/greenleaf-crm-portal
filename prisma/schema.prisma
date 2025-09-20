@@ -10,31 +10,7 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-enum UserRole {
-  SITE_ADMIN
-  SERVICE_CENTER_ADMIN
-  MANAGER
-}
-
-enum ApplicationStatus {
-  NEW
-  UNDER_REVIEW
-  APPROVED
-  REJECTED
-  ERROR
-}
-
-enum PaymentMethod {
-  KASPI
-  CASH
-  OTHER_BANKS
-}
-
-enum PlacementArea {
-  AUTO
-  LEFT
-  RIGHT
-}
+// Enums are not supported in SQLite, using String with constraints instead
 
 model ServiceCenter {
   id          String   @id @default(cuid())
@@ -60,7 +36,7 @@ model User {
   id              String   @id @default(cuid())
   email           String   @unique
   password        String
-  role            UserRole
+  role            String // SITE_ADMIN, SERVICE_CENTER_ADMIN, MANAGER
   serviceCenterId String?
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
@@ -84,10 +60,10 @@ model Application {
   sponsor         String
   placement       String
   idNumber        String // номер удостоверения
-  placementArea   PlacementArea
-  paymentMethod   PaymentMethod
+  placementArea   String // AUTO, LEFT, RIGHT
+  paymentMethod   String // KASPI, CASH, OTHER_BANKS
   paymentReceipt  String? // file path or URL
-  status          ApplicationStatus @default(NEW)
+  status          String @default("NEW") // NEW, UNDER_REVIEW, APPROVED, REJECTED, ERROR
   rejectionReason String?
   greenleafLogin  String?
   greenleafPassword String? // temporary password
@@ -107,7 +83,7 @@ model Application {
 model ApplicationHistory {
   id            String   @id @default(cuid())
   applicationId String
-  status        ApplicationStatus
+  status        String // NEW, UNDER_REVIEW, APPROVED, REJECTED, ERROR
   comment       String?
   changedBy     String
   createdAt     DateTime @default(now())

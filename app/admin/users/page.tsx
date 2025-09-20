@@ -6,14 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { UserRole } from '@/lib/types';
+// UserRole removed - using string literals instead
 import { PlusIcon, PencilIcon, TrashIcon, KeyIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 interface User {
   id: string;
   email: string;
-  role: UserRole;
+  role: string;
   isActive: boolean;
   createdAt: string;
   serviceCenter?: {
@@ -38,7 +38,7 @@ export default function UsersPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: UserRole.MANAGER,
+    role: 'MANAGER',
     serviceCenterId: '',
   });
 
@@ -54,7 +54,7 @@ export default function UsersPage() {
         throw new Error('Failed to fetch users');
       }
       const data = await response.json();
-      setUsers(data);
+      setUsers(Array.isArray(data) ? data : []);
     } catch (error: any) {
       toast.error(error.message || 'Ошибка при загрузке пользователей');
     } finally {
@@ -159,20 +159,20 @@ export default function UsersPage() {
     setFormData({
       email: '',
       password: '',
-      role: UserRole.MANAGER,
+      role: 'MANAGER',
       serviceCenterId: '',
     });
     setEditingUser(null);
     setShowForm(false);
   };
 
-  const getRoleLabel = (role: UserRole): string => {
+  const getRoleLabel = (role: string): string => {
     switch (role) {
-      case UserRole.SITE_ADMIN:
+      case 'SITE_ADMIN':
         return 'Админ сайта';
-      case UserRole.SERVICE_CENTER_ADMIN:
+      case 'SERVICE_CENTER_ADMIN':
         return 'Админ центра';
-      case UserRole.MANAGER:
+      case 'MANAGER':
         return 'Менеджер';
       default:
         return 'Неизвестно';
@@ -239,12 +239,12 @@ export default function UsersPage() {
                   <Select
                     id="role"
                     value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     required
                   >
-                    <option value={UserRole.MANAGER}>Менеджер</option>
-                    <option value={UserRole.SERVICE_CENTER_ADMIN}>Админ центра</option>
-                    <option value={UserRole.SITE_ADMIN}>Админ сайта</option>
+                    <option value="MANAGER">Менеджер</option>
+                    <option value="SERVICE_CENTER_ADMIN">Админ центра</option>
+                    <option value="SITE_ADMIN">Админ сайта</option>
                   </Select>
                 </div>
                 <div>
@@ -255,11 +255,11 @@ export default function UsersPage() {
                     onChange={(e) => setFormData({ ...formData, serviceCenterId: e.target.value })}
                   >
                     <option value="">Выберите центр</option>
-                    {serviceCenters.map((sc) => (
+                    {serviceCenters && Array.isArray(serviceCenters) ? serviceCenters.map((sc) => (
                       <option key={sc.id} value={sc.id}>
                         {sc.number} - {sc.description}
                       </option>
-                    ))}
+                    )) : null}
                   </Select>
                 </div>
               </div>
@@ -312,7 +312,7 @@ export default function UsersPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {users.map((user) => (
+                  {users && Array.isArray(users) ? users.map((user) => (
                     <tr key={user.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {user.email}
@@ -361,7 +361,13 @@ export default function UsersPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                        Загрузка данных...
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

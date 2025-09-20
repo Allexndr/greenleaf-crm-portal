@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
   ];
 
   // Admin routes that require authentication
-  const adminRoutes = ['/admin'];
+  const adminRoutes = ['/admin', '/api/admin'];
 
   // Check if the route is public
   if (publicRoutes.some(route => pathname.startsWith(route))) {
@@ -58,12 +58,11 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
 

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { CogIcon, SaveIcon, TestTubeIcon } from '@heroicons/react/24/outline';
+import { CogIcon, CheckIcon, BeakerIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 interface SystemSettings {
@@ -165,7 +165,7 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TestTubeIcon className="h-5 w-5 text-gray-500" /> Настройки Greenleaf
+            <BeakerIcon className="h-5 w-5 text-gray-500" /> Настройки Greenleaf
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -196,7 +196,7 @@ export default function SettingsPage() {
               disabled={testing}
               variant="outline"
             >
-              <TestTubeIcon className="h-4 w-4 mr-2" />
+              <BeakerIcon className="h-4 w-4 mr-2" />
               {testing ? 'Тестирование...' : 'Тест подключения'}
             </Button>
           </div>
@@ -286,7 +286,7 @@ export default function SettingsPage() {
       {/* Save Button */}
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
-          <SaveIcon className="h-4 w-4 mr-2" />
+          <CheckIcon className="h-4 w-4 mr-2" />
           {saving ? 'Сохранение...' : 'Сохранить настройки'}
         </Button>
       </div>

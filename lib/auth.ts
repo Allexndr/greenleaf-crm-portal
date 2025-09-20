@@ -31,18 +31,18 @@ export async function verifyPassword(password: string, hashedPassword: string): 
   return bcrypt.compare(password, hashedPassword);
 }
 
-export function hasPermission(userRole: UserRole, requiredRole: UserRole): boolean {
+export function hasPermission(userRole: string, requiredRole: string): boolean {
   const roleHierarchy = {
     [UserRole.MANAGER]: 0,
     [UserRole.SERVICE_CENTER_ADMIN]: 1,
     [UserRole.SITE_ADMIN]: 2,
   };
 
-  return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+  return roleHierarchy[userRole as keyof typeof roleHierarchy] >= roleHierarchy[requiredRole as keyof typeof roleHierarchy];
 }
 
 export function canAccessServiceCenter(
-  userRole: UserRole,
+  userRole: string,
   userServiceCenterId: string | undefined,
   targetServiceCenterId: string
 ): boolean {

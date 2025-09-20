@@ -34,8 +34,8 @@ export async function createAuditLog(data: AuditLogData) {
  * Получить IP адрес из запроса
  */
 export function getClientIP(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIP = request.headers.get('x-real-ip');
+  const forwarded = request.headers?.get('x-forwarded-for');
+  const realIP = request.headers?.get('x-real-ip');
   
   if (forwarded) {
     return forwarded.split(',')[0].trim();
@@ -52,7 +52,7 @@ export function getClientIP(request: Request): string {
  * Получить User-Agent из запроса
  */
 export function getUserAgent(request: Request): string {
-  return request.headers.get('user-agent') || 'unknown';
+  return request.headers?.get('user-agent') || 'unknown';
 }
 
 /**

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ApplicationStatus, getStatusLabel, PaymentMethod, getPaymentMethodLabel, UserRole } from '@/lib/types';
+import { ApplicationStatus, getStatusLabel, PaymentMethod, getPaymentMethodLabel } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 import { MagnifyingGlassIcon, FunnelIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
@@ -74,7 +74,7 @@ export default function ApplicationsManagementPage() {
         throw new Error('Failed to fetch applications');
       }
       const data = await response.json();
-      setApplications(data);
+      setApplications(data.applications || []);
     } catch (error: any) {
       toast.error(error.message || 'Ошибка при загрузке заявок');
     } finally {
@@ -97,7 +97,7 @@ export default function ApplicationsManagementPage() {
 
   const fetchManagers = async () => {
     try {
-      const response = await fetch('/api/admin/users?role=' + UserRole.MANAGER);
+      const response = await fetch('/api/admin/users?role=MANAGER');
       if (!response.ok) {
         throw new Error('Failed to fetch managers');
       }
@@ -269,7 +269,7 @@ export default function ApplicationsManagementPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {applications.map((app) => (
+                  {applications && Array.isArray(applications) ? applications.map((app) => (
                     <tr key={app.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {app.applicationNumber}
@@ -311,7 +311,13 @@ export default function ApplicationsManagementPage() {
                         </Link>
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                        Загрузка данных...
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

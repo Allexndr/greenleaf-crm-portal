@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     // Set cookie
     response.headers.set(
       'Set-Cookie',
-      `auth-token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`
+      `auth-token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=None; Secure=false`
     );
 
     return response;

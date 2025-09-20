@@ -1,11 +1,30 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createApiResponse, createErrorResponse, getCurrentUser } from '@/lib/api-helpers';
+import { verifyToken } from '@/lib/auth';
 import { ApplicationStatus, PaymentMethod } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = getCurrentUser(request);
+    // Try to get user from headers first (from middleware)
+    let user = getCurrentUser(request);
+    
+    // If not found, try to get from cookie directly
+    if (!user) {
+      const token = request.cookies.get('auth-token')?.value;
+      if (token) {
+        const payload = verifyToken(token);
+        if (payload) {
+          user = {
+            id: payload.userId,
+            email: payload.email,
+            role: payload.role,
+            serviceCenterId: payload.serviceCenterId,
+          };
+        }
+      }
+    }
+    
     if (!user) {
       return createErrorResponse('Не авторизован', 401);
     }
@@ -94,18 +113,31 @@ export async function GET(request: NextRequest) {
       count: item._count.serviceCenterId,
     }));
 
-    // Get applications by month
-    const applicationsByMonth = await prisma.$queryRaw`
-      SELECT 
-        strftime('%Y-%m', createdAt) as month,
-        COUNT(*) as count
-      FROM Application
-      WHERE ${where.createdAt ? `createdAt >= '${startDate || '1900-01-01'}' AND createdAt <= '${endDate || '2100-12-31'}'` : '1=1'}
-      ${user.role !== 'SITE_ADMIN' && user.serviceCenterId ? `AND serviceCenterId = '${user.serviceCenterId}'` : ''}
-      GROUP BY strftime('%Y-%m', createdAt)
-      ORDER BY month DESC
-      LIMIT 12
-    ` as Array<{ month: string; count: number }>;
+    // Get applications by month - simplified approach
+    const applications = await prisma.application.findMany({
+      where: {
+        ...where,
+        createdAt: {
+          gte: startDate ? new Date(startDate) : undefined,
+          lte: endDate ? new Date(endDate) : undefined,
+        },
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    // Group by month
+    const monthCounts: { [key: string]: number } = {};
+    applications.forEach(app => {
+      const month = app.createdAt.toISOString().substring(0, 7); // YYYY-MM
+      monthCounts[month] = (monthCounts[month] || 0) + 1;
+    });
+
+    const applicationsByMonth = Object.entries(monthCounts)
+      .map(([month, count]) => ({ month, count }))
+      .sort((a, b) => b.month.localeCompare(a.month))
+      .slice(0, 12);
 
     // Calculate average processing time
     const processingTimes = await prisma.application.findMany({

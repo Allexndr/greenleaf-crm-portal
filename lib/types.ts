@@ -1,28 +1,33 @@
-export enum UserRole {
-  SITE_ADMIN = 'SITE_ADMIN',
-  SERVICE_CENTER_ADMIN = 'SERVICE_CENTER_ADMIN',
-  MANAGER = 'MANAGER',
-}
+export const UserRole = {
+  SITE_ADMIN: 'SITE_ADMIN',
+  SERVICE_CENTER_ADMIN: 'SERVICE_CENTER_ADMIN',
+  MANAGER: 'MANAGER',
+} as const;
 
-export enum ApplicationStatus {
-  NEW = 'NEW',
-  UNDER_REVIEW = 'UNDER_REVIEW',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-  ERROR = 'ERROR',
-}
+export const ApplicationStatus = {
+  NEW: 'NEW',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  ERROR: 'ERROR',
+} as const;
 
-export enum PaymentMethod {
-  KASPI = 'KASPI',
-  CASH = 'CASH',
-  OTHER_BANKS = 'OTHER_BANKS',
-}
+export const PaymentMethod = {
+  KASPI: 'KASPI',
+  CASH: 'CASH',
+  OTHER_BANKS: 'OTHER_BANKS',
+} as const;
 
-export enum PlacementArea {
-  AUTO = 'AUTO',
-  LEFT = 'LEFT',
-  RIGHT = 'RIGHT',
-}
+export const PlacementArea = {
+  AUTO: 'AUTO',
+  LEFT: 'LEFT',
+  RIGHT: 'RIGHT',
+} as const;
+
+export type UserRole = typeof UserRole[keyof typeof UserRole];
+export type ApplicationStatus = typeof ApplicationStatus[keyof typeof ApplicationStatus];
+export type PaymentMethod = typeof PaymentMethod[keyof typeof PaymentMethod];
+export type PlacementArea = typeof PlacementArea[keyof typeof PlacementArea];
 
 export interface ServiceCenter {
   id: string;
@@ -40,7 +45,7 @@ export interface ServiceCenter {
 export interface User {
   id: string;
   email: string;
-  role: UserRole;
+  role: string;
   serviceCenterId?: string;
   isActive: boolean;
   createdAt: Date;
@@ -57,10 +62,10 @@ export interface Application {
   sponsor: string;
   placement: string;
   idNumber: string;
-  placementArea: PlacementArea;
-  paymentMethod: PaymentMethod;
+  placementArea: string;
+  paymentMethod: string;
   paymentReceipt?: string;
-  status: ApplicationStatus;
+  status: string;
   rejectionReason?: string;
   greenleafLogin?: string;
   greenleafPassword?: string;
@@ -73,7 +78,7 @@ export interface Application {
 export interface ApplicationHistory {
   id: string;
   applicationId: string;
-  status: ApplicationStatus;
+  status: string;
   comment?: string;
   changedBy: string;
   createdAt: Date;
@@ -95,7 +100,7 @@ export interface TrustColor {
   label: string;
 }
 
-export const getTrustColor = (paymentMethod: PaymentMethod): TrustColor => {
+export const getTrustColor = (paymentMethod: string): TrustColor => {
   switch (paymentMethod) {
     case PaymentMethod.KASPI:
       return { color: 'green', label: 'Каспи оплата' };
@@ -108,7 +113,7 @@ export const getTrustColor = (paymentMethod: PaymentMethod): TrustColor => {
   }
 };
 
-export const getStatusLabel = (status: ApplicationStatus): string => {
+export const getStatusLabel = (status: string): string => {
   switch (status) {
     case ApplicationStatus.NEW:
       return 'Новая';
@@ -125,7 +130,7 @@ export const getStatusLabel = (status: ApplicationStatus): string => {
   }
 };
 
-export const getPaymentMethodLabel = (method: PaymentMethod): string => {
+export const getPaymentMethodLabel = (method: string): string => {
   switch (method) {
     case PaymentMethod.KASPI:
       return 'Каспи';
@@ -138,7 +143,7 @@ export const getPaymentMethodLabel = (method: PaymentMethod): string => {
   }
 };
 
-export const getPlacementAreaLabel = (area: PlacementArea): string => {
+export const getPlacementAreaLabel = (area: string): string => {
   switch (area) {
     case PlacementArea.AUTO:
       return 'Авто';

@@ -1,10 +1,29 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createApiResponse, createErrorResponse, getCurrentUser } from '@/lib/api-helpers';
+import { verifyToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = getCurrentUser(request);
+    // Try to get user from headers first (from middleware)
+    let user = getCurrentUser(request);
+    
+    // If not found, try to get from cookie directly
+    if (!user) {
+      const token = request.cookies.get('auth-token')?.value;
+      if (token) {
+        const payload = verifyToken(token);
+        if (payload) {
+          user = {
+            id: payload.userId,
+            email: payload.email,
+            role: payload.role,
+            serviceCenterId: payload.serviceCenterId,
+          };
+        }
+      }
+    }
+    
     if (!user) {
       return createErrorResponse('Не авторизован', 401);
     }

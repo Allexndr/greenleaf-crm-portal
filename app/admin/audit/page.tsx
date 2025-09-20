@@ -65,7 +65,7 @@ export default function AuditPage() {
         throw new Error('Failed to fetch audit logs');
       }
       const data = await response.json();
-      setAuditLogs(data);
+      setAuditLogs(data.auditLogs || []);
     } catch (error: any) {
       toast.error(error.message || 'Ошибка при загрузке логов аудита');
     } finally {
@@ -273,7 +273,7 @@ export default function AuditPage() {
             <div className="text-center py-8 text-gray-500">Записи не найдены.</div>
           ) : (
             <div className="space-y-4">
-              {auditLogs.map((log) => (
+              {auditLogs && Array.isArray(auditLogs) ? auditLogs.map((log) => (
                 <div key={log.id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -312,7 +312,11 @@ export default function AuditPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8 text-gray-500">
+                  Загрузка данных...
+                </div>
+              )}
             </div>
           )}
         </CardContent>
