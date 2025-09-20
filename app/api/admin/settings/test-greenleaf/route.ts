@@ -3,6 +3,8 @@ import { createApiResponse, createErrorResponse, getCurrentUser } from '@/lib/ap
 import { verifyToken } from '@/lib/auth';
 import { greenleafAPI } from '@/lib/greenleaf-api';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Try to get user from headers first (from middleware)

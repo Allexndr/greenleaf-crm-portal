@@ -4,6 +4,8 @@ import { createErrorResponse, getCurrentUser } from '@/lib/api-helpers';
 import { verifyToken } from '@/lib/auth';
 import * as XLSX from 'xlsx';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Try to get user from headers first (from middleware)

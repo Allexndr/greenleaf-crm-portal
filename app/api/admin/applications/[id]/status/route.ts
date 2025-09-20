@@ -5,6 +5,8 @@ import { verifyToken } from '@/lib/auth';
 import { ApplicationStatus } from '@/lib/types';
 import { generateGreenleafLogin } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }

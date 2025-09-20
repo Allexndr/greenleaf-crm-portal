@@ -5,6 +5,8 @@ import { verifyToken } from '@/lib/auth';
 import { ApplicationStatus, PaymentMethod, getStatusLabel, getPaymentMethodLabel, getPlacementAreaLabel } from '@/lib/types';
 import * as XLSX from 'xlsx';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Try to get user from headers first (from middleware)

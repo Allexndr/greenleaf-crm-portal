@@ -4,6 +4,8 @@ import { createApiResponse, createErrorResponse, validateRequiredFields, validat
 import { verifyPassword, generateToken } from '@/lib/auth';
 import { createAuditLogger, getClientIP, getUserAgent } from '@/lib/audit';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

@@ -5,6 +5,8 @@ import { verifyToken } from '@/lib/auth';
 import { generateUniqueLink } from '@/lib/utils';
 import { createAuditLogger, getClientIP, getUserAgent } from '@/lib/audit';
 
+export const dynamic = 'force-dynamic';
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }

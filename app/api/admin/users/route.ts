@@ -5,6 +5,8 @@ import { hashPassword, verifyToken } from '@/lib/auth';
 import { UserRole } from '@/lib/types';
 import { createAuditLogger, getClientIP, getUserAgent } from '@/lib/audit';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Try to get user from headers first (from middleware)

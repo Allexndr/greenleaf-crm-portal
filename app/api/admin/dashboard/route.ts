@@ -4,6 +4,8 @@ import { createApiResponse, createErrorResponse, getCurrentUser } from '@/lib/ap
 import { ApplicationStatus } from '@/lib/types';
 import { verifyToken } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Try to get user from headers first (from middleware)

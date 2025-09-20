@@ -4,6 +4,8 @@ import { createApiResponse, createErrorResponse, getCurrentUser } from '@/lib/ap
 import { verifyToken } from '@/lib/auth';
 import { ApplicationStatus } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
