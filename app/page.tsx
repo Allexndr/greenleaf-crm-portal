@@ -68,11 +68,18 @@ export default function HomePage() {
               </div>
             <div className="text-right">
               <p className="text-sm text-gray-500 mb-2">Добро пожаловать!</p>
-              <Link href="/admin/login">
-                <Button variant="outline" size="sm" className="text-blue-600 border-blue-600 hover:bg-blue-50">
-                  🔐 Админ панель
-                </Button>
-              </Link>
+              <div className="space-x-2">
+                <Link href="/admin/login">
+                  <Button variant="outline" size="sm" className="text-blue-600 border-blue-600 hover:bg-blue-50">
+                    🔐 Админ панель
+                  </Button>
+                </Link>
+                <Link href="?sc=68ce92ea47d698e84e885939">
+                  <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-50">
+                    🏢 Тестовый центр
+                  </Button>
+                </Link>
+              </div>
             </div>
             </div>
           </div>
@@ -121,6 +128,12 @@ export default function HomePage() {
                   <p className="text-sm text-gray-500 mb-4">
                     Получите ссылку от вашего сервисного центра
                   </p>
+                  {/* Test button for development */}
+                  <Link href="/register?sc=68ce92ea47d698e84e885939">
+                    <Button variant="outline" className="w-full">
+                      🧪 Тестовая регистрация
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
@@ -144,6 +157,12 @@ export default function HomePage() {
                   <p className="text-sm text-gray-500 mb-4">
                     Получите ссылку от вашего сервисного центра
                   </p>
+                  {/* Test button for development */}
+                  <Link href="/status?sc=68ce92ea47d698e84e885939">
+                    <Button variant="outline" className="w-full">
+                      🔍 Тестовая проверка
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
