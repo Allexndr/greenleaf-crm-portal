@@ -11,7 +11,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:init": "node scripts/init-db.js"
+    "db:init": "node scripts/init-db.js",
+    "mongodb:init": "node scripts/init-mongodb.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -23,6 +24,7 @@
     "file-saver": "^2.0.5",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.294.0",
+    "mongodb": "^6.20.0",
     "next": "14.0.4",
     "next-themes": "^0.2.1",
     "prisma": "^5.7.1",
