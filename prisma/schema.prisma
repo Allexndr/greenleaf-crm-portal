@@ -1,0 +1,146 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum UserRole {
+  SITE_ADMIN
+  SERVICE_CENTER_ADMIN
+  MANAGER
+}
+
+enum ApplicationStatus {
+  NEW
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  ERROR
+}
+
+enum PaymentMethod {
+  KASPI
+  CASH
+  OTHER_BANKS
+}
+
+enum PlacementArea {
+  AUTO
+  LEFT
+  RIGHT
+}
+
+model ServiceCenter {
+  id          String   @id @default(cuid())
+  number      String   @unique // e.g., S240350
+  description String
+  address     String
+  uniqueLink  String   @unique // e.g., registergreenleaf.kz/S240350
+  greenleafLogin String
+  greenleafPassword String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  applications Application[]
+  users       User[]
+  auditLogs   AuditLog[]
+
+  @@map("service_centers")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  password        String
+  role            UserRole
+  serviceCenterId String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  serviceCenter ServiceCenter? @relation(fields: [serviceCenterId], references: [id])
+  applications  Application[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model Application {
+  id              String            @id @default(cuid())
+  applicationNumber String          @unique
+  firstName       String
+  lastName        String
+  phone           String
+  email           String
+  sponsor         String
+  placement       String
+  idNumber        String // номер удостоверения
+  placementArea   PlacementArea
+  paymentMethod   PaymentMethod
+  paymentReceipt  String? // file path or URL
+  status          ApplicationStatus @default(NEW)
+  rejectionReason String?
+  greenleafLogin  String?
+  greenleafPassword String? // temporary password
+  serviceCenterId String
+  managerId       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  serviceCenter ServiceCenter @relation(fields: [serviceCenterId], references: [id])
+  manager      User?          @relation(fields: [managerId], references: [id])
+  history      ApplicationHistory[]
+
+  @@map("applications")
+}
+
+model ApplicationHistory {
+  id            String   @id @default(cuid())
+  applicationId String
+  status        ApplicationStatus
+  comment       String?
+  changedBy     String
+  createdAt     DateTime @default(now())
+
+  // Relations
+  application Application @relation(fields: [applicationId], references: [id])
+
+  @@map("application_history")
+}
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  userId          String
+  serviceCenterId String?
+  action          String
+  details         String?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  // Relations
+  user          User           @relation(fields: [userId], references: [id])
+  serviceCenter ServiceCenter? @relation(fields: [serviceCenterId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model SystemSettings {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+  description String?
+
+  @@map("system_settings")
+}
+
