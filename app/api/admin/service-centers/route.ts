@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
+import { connectToDatabase } from '@/lib/mongodb';
 import { createApiResponse, createErrorResponse, getCurrentUser, validateRequiredFields } from '@/lib/api-helpers';
 import { generateUniqueLink } from '@/lib/utils';
 import { verifyToken } from '@/lib/auth';
@@ -36,19 +37,67 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Доступ запрещен', 403);
     }
 
-    const serviceCenters = await prisma.serviceCenter.findMany({
-      include: {
-        _count: {
-          select: {
-            applications: true,
-            users: true,
+    let serviceCenters: any[] = [];
+
+    try {
+      // Try MongoDB first
+      const { db } = await connectToDatabase();
+      const mongoServiceCenters = await db.collection('serviceCenters')
+        .find({})
+        .sort({ createdAt: -1 })
+        .toArray();
+
+      // Get counts for each service center
+      serviceCenters = await Promise.all(mongoServiceCenters.map(async (sc) => {
+        const applicationsCount = await db.collection('applications').countDocuments({
+          serviceCenterId: sc._id,
+        });
+        
+        const usersCount = await db.collection('users').countDocuments({
+          serviceCenterId: sc._id,
+        });
+
+        return {
+          id: sc._id.toString(),
+          number: sc.number,
+          description: sc.description,
+          address: sc.address,
+          uniqueLink: sc.uniqueLink || '',
+          greenleafLogin: sc.greenleafLogin || '',
+          greenleafPassword: sc.greenleafPassword || '',
+          isActive: sc.isActive,
+          createdAt: sc.createdAt,
+          updatedAt: sc.updatedAt,
+          _count: {
+            applications: applicationsCount,
+            users: usersCount,
           },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+        };
+      }));
+
+    } catch (mongoError) {
+      console.warn('MongoDB failed, trying Prisma:', mongoError);
+      
+      // Fallback to Prisma
+      try {
+        serviceCenters = await prisma.serviceCenter.findMany({
+          include: {
+            _count: {
+              select: {
+                applications: true,
+                users: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+      } catch (prismaError) {
+        console.error('Both MongoDB and Prisma failed:', prismaError);
+        return createErrorResponse('Ошибка подключения к базе данных', 500);
+      }
+    }
 
     return createApiResponse(serviceCenters);
   } catch (error) {
