@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
+import { connectToDatabase } from '@/lib/mongodb';
 import { createApiResponse, createErrorResponse, getCurrentUser, validateEmail } from '@/lib/api-helpers';
 import { hashPassword, verifyToken } from '@/lib/auth';
 import { UserRole } from '@/lib/types';
 import { createAuditLogger, getClientIP, getUserAgent } from '@/lib/audit';
+import { ObjectId } from 'mongodb';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,78 +54,168 @@ export async function PUT(
       return createErrorResponse('Некорректная роль', 400);
     }
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: {
-        id: params.id,
-      },
-    });
+    let existingUser: any = null;
+    let updatedUser: any = null;
 
-    if (!existingUser) {
-      return createErrorResponse('Пользователь не найден', 404);
-    }
-
-    // Check if email is already taken by another user
-    if (body.email && body.email !== existingUser.email) {
-      const emailTaken = await prisma.user.findUnique({
+    try {
+      // Try Prisma first
+      existingUser = await prisma.user.findUnique({
         where: {
-          email: body.email,
+          id: params.id,
         },
       });
 
-      if (emailTaken) {
-        return createErrorResponse('Пользователь с таким email уже существует', 400);
+      if (!existingUser) {
+        return createErrorResponse('Пользователь не найден', 404);
       }
-    }
 
-    // Validate service center assignment
-    if (body.serviceCenterId) {
-      const serviceCenter = await prisma.serviceCenter.findUnique({
+      // Check if email is already taken by another user
+      if (body.email && body.email !== existingUser.email) {
+        const emailTaken = await prisma.user.findUnique({
+          where: {
+            email: body.email,
+          },
+        });
+
+        if (emailTaken) {
+          return createErrorResponse('Пользователь с таким email уже существует', 400);
+        }
+      }
+
+      // Validate service center assignment
+      if (body.serviceCenterId) {
+        const serviceCenter = await prisma.serviceCenter.findUnique({
+          where: {
+            id: body.serviceCenterId,
+          },
+        });
+
+        if (!serviceCenter) {
+          return createErrorResponse('Сервисный центр не найден', 400);
+        }
+      }
+
+      // Prepare update data
+      const updateData: any = {};
+      
+      if (body.email) updateData.email = body.email;
+      if (body.role) updateData.role = body.role;
+      if (body.serviceCenterId !== undefined) updateData.serviceCenterId = body.serviceCenterId || null;
+      if (body.isActive !== undefined) updateData.isActive = body.isActive;
+      
+      if (body.password) {
+        updateData.password = await hashPassword(body.password);
+      }
+
+      // Update user
+      updatedUser = await prisma.user.update({
         where: {
-          id: body.serviceCenterId,
+          id: params.id,
         },
-      });
-
-      if (!serviceCenter) {
-        return createErrorResponse('Сервисный центр не найден', 400);
-      }
-    }
-
-    // Prepare update data
-    const updateData: any = {};
-    
-    if (body.email) updateData.email = body.email;
-    if (body.role) updateData.role = body.role;
-    if (body.serviceCenterId !== undefined) updateData.serviceCenterId = body.serviceCenterId || null;
-    if (body.isActive !== undefined) updateData.isActive = body.isActive;
-    
-    if (body.password) {
-      updateData.password = await hashPassword(body.password);
-    }
-
-    // Update user
-    const updatedUser = await prisma.user.update({
-      where: {
-        id: params.id,
-      },
-      data: updateData,
-      include: {
-        serviceCenter: {
-          select: {
-            id: true,
-            number: true,
-            description: true,
+        data: updateData,
+        include: {
+          serviceCenter: {
+            select: {
+              id: true,
+              number: true,
+              description: true,
+            },
           },
         },
-      },
-    });
+      });
+    } catch (prismaError) {
+      console.warn('Prisma failed, using MongoDB:', prismaError);
+      
+      // Fallback to MongoDB
+      const { db } = await connectToDatabase();
+      
+      // Check if user exists in MongoDB
+      existingUser = await db.collection('users').findOne({
+        _id: new ObjectId(params.id),
+      });
+
+      if (!existingUser) {
+        return createErrorResponse('Пользователь не найден', 404);
+      }
+
+      // Check if email is already taken by another user
+      if (body.email && body.email !== existingUser.email) {
+        const emailTaken = await db.collection('users').findOne({
+          email: body.email,
+        });
+
+        if (emailTaken) {
+          return createErrorResponse('Пользователь с таким email уже существует', 400);
+        }
+      }
+
+      // Validate service center assignment
+      if (body.serviceCenterId) {
+        const serviceCenter = await db.collection('serviceCenters').findOne({
+          _id: new ObjectId(body.serviceCenterId),
+        });
+
+        if (!serviceCenter) {
+          return createErrorResponse('Сервисный центр не найден', 400);
+        }
+      }
+
+      // Prepare update data
+      const updateData: any = {
+        updatedAt: new Date(),
+      };
+      
+      if (body.email) updateData.email = body.email;
+      if (body.role) updateData.role = body.role;
+      if (body.serviceCenterId !== undefined) updateData.serviceCenterId = body.serviceCenterId || null;
+      if (body.isActive !== undefined) updateData.isActive = body.isActive;
+      
+      if (body.password) {
+        updateData.password = await hashPassword(body.password);
+      }
+
+      // Update user in MongoDB
+      await db.collection('users').updateOne(
+        { _id: new ObjectId(params.id) },
+        { $set: updateData }
+      );
+
+      // Get updated user with service center info
+      const mongoUser = await db.collection('users').findOne({
+        _id: new ObjectId(params.id),
+      });
+
+      let serviceCenter = null;
+      if (mongoUser?.serviceCenterId) {
+        serviceCenter = await db.collection('serviceCenters').findOne({
+          _id: new ObjectId(mongoUser.serviceCenterId),
+        });
+      }
+
+      updatedUser = {
+        id: mongoUser._id.toString(),
+        email: mongoUser.email,
+        role: mongoUser.role,
+        isActive: mongoUser.isActive,
+        createdAt: mongoUser.createdAt,
+        serviceCenter: serviceCenter ? {
+          id: serviceCenter._id.toString(),
+          number: serviceCenter.number,
+          description: serviceCenter.description,
+        } : null,
+      };
+    }
 
     // Log user update
-    const auditLogger = createAuditLogger(user.id, user.serviceCenterId, request);
-    await auditLogger.logUserUpdated(updatedUser.id, {
-      changes: updateData,
-      timestamp: new Date().toISOString(),
-    });
+    try {
+      const auditLogger = createAuditLogger(user.id, user.serviceCenterId, request);
+      await auditLogger.logUserUpdated(updatedUser.id, {
+        changes: body,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (auditError) {
+      console.warn('Audit logging failed:', auditError);
+    }
 
     return createApiResponse(updatedUser);
   } catch (error) {
@@ -165,32 +257,64 @@ export async function DELETE(
       return createErrorResponse('Доступ запрещен', 403);
     }
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: {
-        id: params.id,
-      },
-    });
+    let existingUser: any = null;
 
-    if (!existingUser) {
-      return createErrorResponse('Пользователь не найден', 404);
+    try {
+      // Try Prisma first
+      existingUser = await prisma.user.findUnique({
+        where: {
+          id: params.id,
+        },
+      });
+
+      if (!existingUser) {
+        return createErrorResponse('Пользователь не найден', 404);
+      }
+
+      // Prevent deletion of self
+      if (existingUser.id === user.id) {
+        return createErrorResponse('Нельзя удалить самого себя', 400);
+      }
+
+      // Delete user
+      await prisma.user.delete({
+        where: {
+          id: params.id,
+        },
+      });
+    } catch (prismaError) {
+      console.warn('Prisma failed, using MongoDB:', prismaError);
+      
+      // Fallback to MongoDB
+      const { db } = await connectToDatabase();
+      
+      // Check if user exists in MongoDB
+      existingUser = await db.collection('users').findOne({
+        _id: new ObjectId(params.id),
+      });
+
+      if (!existingUser) {
+        return createErrorResponse('Пользователь не найден', 404);
+      }
+
+      // Prevent deletion of self
+      if (existingUser._id.toString() === user.id) {
+        return createErrorResponse('Нельзя удалить самого себя', 400);
+      }
+
+      // Delete user from MongoDB
+      await db.collection('users').deleteOne({
+        _id: new ObjectId(params.id),
+      });
     }
-
-    // Prevent deletion of self
-    if (existingUser.id === user.id) {
-      return createErrorResponse('Нельзя удалить самого себя', 400);
-    }
-
-    // Delete user
-    await prisma.user.delete({
-      where: {
-        id: params.id,
-      },
-    });
 
     // Log user deletion
-    const auditLogger = createAuditLogger(user.id, user.serviceCenterId, request);
-    await auditLogger.logUserDeleted(existingUser.id);
+    try {
+      const auditLogger = createAuditLogger(user.id, user.serviceCenterId, request);
+      await auditLogger.logUserDeleted(existingUser.id || existingUser._id.toString());
+    } catch (auditError) {
+      console.warn('Audit logging failed:', auditError);
+    }
 
     return createApiResponse({ message: 'Пользователь удален' });
   } catch (error) {

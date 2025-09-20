@@ -161,6 +161,18 @@ export default function AdminLoginPage() {
               </div>
             </div>
           </div>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Тестовые данные:
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              admin@greenleaf.kz / admin123
+            </p>
+            <p className="text-xs text-gray-500">
+              manager@greenleaf.kz / manager123
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

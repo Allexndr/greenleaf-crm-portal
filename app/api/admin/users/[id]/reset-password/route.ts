@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
+import { connectToDatabase } from '@/lib/mongodb';
 import { createApiResponse, createErrorResponse, getCurrentUser } from '@/lib/api-helpers';
 import { verifyToken } from '@/lib/auth';
 import { hashPassword } from '@/lib/auth';
 import { createAuditLogger, getClientIP, getUserAgent } from '@/lib/audit';
+import { ObjectId } from 'mongodb';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,38 +42,75 @@ export async function POST(
       return createErrorResponse('Доступ запрещен', 403);
     }
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: {
-        id: params.id,
-      },
-    });
+    let existingUser: any = null;
 
-    if (!existingUser) {
-      return createErrorResponse('Пользователь не найден', 404);
+    try {
+      // Try Prisma first
+      existingUser = await prisma.user.findUnique({
+        where: {
+          id: params.id,
+        },
+      });
+
+      if (!existingUser) {
+        return createErrorResponse('Пользователь не найден', 404);
+      }
+
+      // Generate new password
+      const newPassword = 'temp123'; // You can generate a random password here
+      const hashedPassword = await hashPassword(newPassword);
+
+      // Update password
+      await prisma.user.update({
+        where: {
+          id: params.id,
+        },
+        data: {
+          password: hashedPassword,
+        },
+      });
+    } catch (prismaError) {
+      console.warn('Prisma failed, using MongoDB:', prismaError);
+      
+      // Fallback to MongoDB
+      const { db } = await connectToDatabase();
+      
+      // Check if user exists in MongoDB
+      existingUser = await db.collection('users').findOne({
+        _id: new ObjectId(params.id),
+      });
+
+      if (!existingUser) {
+        return createErrorResponse('Пользователь не найден', 404);
+      }
+
+      // Generate new password
+      const newPassword = 'temp123'; // You can generate a random password here
+      const hashedPassword = await hashPassword(newPassword);
+
+      // Update password in MongoDB
+      await db.collection('users').updateOne(
+        { _id: new ObjectId(params.id) },
+        { 
+          $set: { 
+            password: hashedPassword,
+            updatedAt: new Date(),
+          } 
+        }
+      );
     }
 
-    // Generate new password
-    const newPassword = 'temp123'; // You can generate a random password here
-    const hashedPassword = await hashPassword(newPassword);
-
-    // Update password
-    await prisma.user.update({
-      where: {
-        id: params.id,
-      },
-      data: {
-        password: hashedPassword,
-      },
-    });
-
     // Log password reset
-    const auditLogger = createAuditLogger(user.id, user.serviceCenterId, request);
-    await auditLogger.logPasswordChanged(existingUser.id);
+    try {
+      const auditLogger = createAuditLogger(user.id, user.serviceCenterId, request);
+      await auditLogger.logPasswordChanged(existingUser.id || existingUser._id.toString());
+    } catch (auditError) {
+      console.warn('Audit logging failed:', auditError);
+    }
 
     return createApiResponse({
       message: 'Пароль сброшен',
-      newPassword: newPassword, // In production, send this via email
+      newPassword: 'temp123', // In production, send this via email
     });
   } catch (error) {
     console.error('Error resetting password:', error);
