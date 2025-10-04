@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
+import { connectToDatabase } from '@/lib/mongodb';
 import { createApiResponse, createErrorResponse, getCurrentUser } from '@/lib/api-helpers';
 import { verifyToken } from '@/lib/auth';
 import { ApplicationStatus } from '@/lib/types';
 import { generateGreenleafLogin } from '@/lib/utils';
+import { ObjectId } from 'mongodb';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,109 +44,234 @@ export async function PATCH(
       return createErrorResponse('Некорректный статус', 400);
     }
 
-    // Get application
-    const application = await prisma.application.findUnique({
-      where: {
-        id: params.id,
-      },
-      include: {
-        serviceCenter: true,
-      },
-    });
+    let application: any = null;
+    let serviceCenter: any = null;
 
-    if (!application) {
-      return createErrorResponse('Заявка не найдена', 404);
-    }
+    try {
+      // Try MongoDB first
+      const { db } = await connectToDatabase();
 
-    // Check if user has access to this application
-    if (user.role !== 'SITE_ADMIN' && user.serviceCenterId !== application.serviceCenterId) {
-      return createErrorResponse('Доступ запрещен', 403);
-    }
+      // Get application
+      const mongoApplication = await db.collection('applications').findOne({
+        _id: new ObjectId(params.id),
+      });
 
-    // Prepare update data
-    const updateData: any = {
-      status,
-      updatedAt: new Date(),
-    };
+      if (!mongoApplication) {
+        return createErrorResponse('Заявка не найдена', 404);
+      }
 
-    // If approving, generate Greenleaf credentials
-    if (status === ApplicationStatus.APPROVED) {
-      updateData.greenleafLogin = generateGreenleafLogin();
-      updateData.greenleafPassword = process.env.DEFAULT_TEMP_PASSWORD || 'Aa12345';
-    }
+      // Check if user has access to this application
+      if (user.role !== 'SITE_ADMIN' && user.serviceCenterId !== mongoApplication.serviceCenterId?.toString()) {
+        return createErrorResponse('Доступ запрещен', 403);
+      }
 
-    // If rejecting, save rejection reason
-    if (status === ApplicationStatus.REJECTED && rejectionReason) {
-      updateData.rejectionReason = rejectionReason;
-    }
+      // Get service center info
+      if (mongoApplication.serviceCenterId) {
+        serviceCenter = await db.collection('serviceCenters').findOne({
+          _id: mongoApplication.serviceCenterId,
+        });
+      }
 
-    // If taking under review, assign to current user
-    if (status === ApplicationStatus.UNDER_REVIEW) {
-      updateData.managerId = user.id;
-    }
+      // Prepare update data
+      const updateData: any = {
+        status,
+        updatedAt: new Date(),
+      };
 
-    // Update application
-    const updatedApplication = await prisma.application.update({
-      where: {
-        id: params.id,
-      },
-      data: updateData,
-    });
+      // If approving, generate Greenleaf credentials
+      if (status === ApplicationStatus.APPROVED) {
+        updateData.greenleafLogin = generateGreenleafLogin();
+        updateData.greenleafPassword = process.env.DEFAULT_TEMP_PASSWORD || 'Aa12345';
+      }
 
-    // Create history entry
-    await prisma.applicationHistory.create({
-      data: {
-        applicationId: params.id,
+      // If rejecting, save rejection reason
+      if (status === ApplicationStatus.REJECTED && rejectionReason) {
+        updateData.rejectionReason = rejectionReason;
+      }
+
+      // If taking under review, assign to current user
+      if (status === ApplicationStatus.UNDER_REVIEW) {
+        updateData.managerId = new ObjectId(user.id);
+      }
+
+      // Update application
+      await db.collection('applications').updateOne(
+        { _id: new ObjectId(params.id) },
+        { $set: updateData }
+      );
+
+      // Create history entry
+      await db.collection('applicationHistory').insertOne({
+        applicationId: new ObjectId(params.id),
         status,
         comment: comment || `Статус изменен на ${status}`,
         changedBy: user.email,
-      },
-    });
+        createdAt: new Date(),
+      });
 
-    // If approved, try to create user in Greenleaf
-    if (status === ApplicationStatus.APPROVED) {
-      try {
-        const { createGreenleafUser } = await import('@/lib/greenleaf-api');
-        const greenleafResult = await createGreenleafUser(application, application.serviceCenter);
-        
-        if (greenleafResult.success && greenleafResult.login) {
-          // Update application with Greenleaf credentials
-          await prisma.application.update({
-            where: { id: params.id },
-            data: {
-              greenleafLogin: greenleafResult.login,
-              greenleafPassword: greenleafResult.password || process.env.DEFAULT_TEMP_PASSWORD || 'Aa12345',
-            },
-          });
-        } else {
-          // Mark as error if Greenleaf creation failed
-          await prisma.application.update({
-            where: { id: params.id },
-            data: { status: ApplicationStatus.ERROR },
-          });
-          
-          await prisma.applicationHistory.create({
-            data: {
-              applicationId: params.id,
+      // If approved, try to create user in Greenleaf
+      if (status === ApplicationStatus.APPROVED) {
+        try {
+          const { createGreenleafUser } = await import('@/lib/greenleaf-api');
+          const greenleafResult = await createGreenleafUser(mongoApplication, serviceCenter);
+
+          if (greenleafResult.success && greenleafResult.login) {
+            // Update application with Greenleaf credentials
+            await db.collection('applications').updateOne(
+              { _id: new ObjectId(params.id) },
+              {
+                $set: {
+                  greenleafLogin: greenleafResult.login,
+                  greenleafPassword: greenleafResult.password || process.env.DEFAULT_TEMP_PASSWORD || 'Aa12345',
+                }
+              }
+            );
+          } else {
+            // Mark as error if Greenleaf creation failed
+            await db.collection('applications').updateOne(
+              { _id: new ObjectId(params.id) },
+              { $set: { status: ApplicationStatus.ERROR } }
+            );
+
+            await db.collection('applicationHistory').insertOne({
+              applicationId: new ObjectId(params.id),
               status: ApplicationStatus.ERROR,
               comment: `Ошибка создания в Greenleaf: ${greenleafResult.error}`,
               changedBy: user.email,
-            },
-          });
+              createdAt: new Date(),
+            });
+          }
+        } catch (error: any) {
+          console.error('Greenleaf integration error:', error);
+          // Mark as error
+          await db.collection('applications').updateOne(
+            { _id: new ObjectId(params.id) },
+            { $set: { status: ApplicationStatus.ERROR } }
+          );
         }
-      } catch (error: any) {
-        console.error('Greenleaf integration error:', error);
-        // Mark as error
-        await prisma.application.update({
-          where: { id: params.id },
-          data: { status: ApplicationStatus.ERROR },
+      }
+
+      // Get updated application
+      const updatedApplication = await db.collection('applications').findOne({
+        _id: new ObjectId(params.id),
+      });
+
+      application = updatedApplication;
+
+    } catch (mongoError) {
+      console.warn('MongoDB failed, trying Prisma:', mongoError);
+
+      // Fallback to Prisma
+      try {
+        const prismaApplication = await prisma.application.findUnique({
+          where: {
+            id: params.id,
+          },
+          include: {
+            serviceCenter: true,
+          },
         });
+
+        if (!prismaApplication) {
+          return createErrorResponse('Заявка не найдена', 404);
+        }
+
+        // Check if user has access to this application
+        if (user.role !== 'SITE_ADMIN' && user.serviceCenterId !== prismaApplication.serviceCenterId) {
+          return createErrorResponse('Доступ запрещен', 403);
+        }
+
+        // Prepare update data
+        const updateData: any = {
+          status,
+          updatedAt: new Date(),
+        };
+
+        // If approving, generate Greenleaf credentials
+        if (status === ApplicationStatus.APPROVED) {
+          updateData.greenleafLogin = generateGreenleafLogin();
+          updateData.greenleafPassword = process.env.DEFAULT_TEMP_PASSWORD || 'Aa12345';
+        }
+
+        // If rejecting, save rejection reason
+        if (status === ApplicationStatus.REJECTED && rejectionReason) {
+          updateData.rejectionReason = rejectionReason;
+        }
+
+        // If taking under review, assign to current user
+        if (status === ApplicationStatus.UNDER_REVIEW) {
+          updateData.managerId = user.id;
+        }
+
+        // Update application
+        const updatedApplication = await prisma.application.update({
+          where: {
+            id: params.id,
+          },
+          data: updateData,
+        });
+
+        // Create history entry
+        await prisma.applicationHistory.create({
+          data: {
+            applicationId: params.id,
+            status,
+            comment: comment || `Статус изменен на ${status}`,
+            changedBy: user.email,
+          },
+        });
+
+        // If approved, try to create user in Greenleaf
+        if (status === ApplicationStatus.APPROVED) {
+          try {
+            const { createGreenleafUser } = await import('@/lib/greenleaf-api');
+            const greenleafResult = await createGreenleafUser(prismaApplication, prismaApplication.serviceCenter);
+
+            if (greenleafResult.success && greenleafResult.login) {
+              // Update application with Greenleaf credentials
+              await prisma.application.update({
+                where: { id: params.id },
+                data: {
+                  greenleafLogin: greenleafResult.login,
+                  greenleafPassword: greenleafResult.password || process.env.DEFAULT_TEMP_PASSWORD || 'Aa12345',
+                },
+              });
+            } else {
+              // Mark as error if Greenleaf creation failed
+              await prisma.application.update({
+                where: { id: params.id },
+                data: { status: ApplicationStatus.ERROR },
+              });
+
+              await prisma.applicationHistory.create({
+                data: {
+                  applicationId: params.id,
+                  status: ApplicationStatus.ERROR,
+                  comment: `Ошибка создания в Greenleaf: ${greenleafResult.error}`,
+                  changedBy: user.email,
+                },
+              });
+            }
+          } catch (error: any) {
+            console.error('Greenleaf integration error:', error);
+            // Mark as error
+            await prisma.application.update({
+              where: { id: params.id },
+              data: { status: ApplicationStatus.ERROR },
+            });
+          }
+        }
+
+        application = updatedApplication;
+      } catch (prismaError) {
+        console.error('Both MongoDB and Prisma failed:', prismaError);
+        return createErrorResponse('Ошибка подключения к базе данных', 500);
       }
     }
 
     return createApiResponse({
       message: 'Статус заявки обновлен',
-      application: updatedApplication,
+      application: application,
     });
   } catch (error) {
     console.error('Error updating application status:', error);
