@@ -16,6 +16,7 @@ export async function GET(
     try {
       // Try MongoDB first
       const { db } = await connectToDatabase();
+      
       const mongoServiceCenter = await db.collection('serviceCenters').findOne({
         _id: new ObjectId(params.id),
         isActive: true,
