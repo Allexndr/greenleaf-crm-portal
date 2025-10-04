@@ -65,7 +65,7 @@ export default function StatusPage() {
     if (applicationNumber && serviceCenterId) {
       setValue('applicationNumber', applicationNumber);
       // Show message that phone number is required
-      toast.info('Введите номер телефона для проверки статуса заявки');
+      toast('Введите номер телефона для проверки статуса заявки', { icon: 'ℹ️' });
     }
   }, [applicationNumber, serviceCenterId, setValue]);
 
