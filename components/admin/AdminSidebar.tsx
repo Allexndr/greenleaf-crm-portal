@@ -13,6 +13,7 @@ import {
   ChartBarIcon,
   ClipboardDocumentListIcon,
   ArrowRightOnRectangleIcon,
+  BeakerIcon,
 } from '@heroicons/react/24/outline';
 
 const navigation = [
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Пользователи', href: '/admin/users', icon: UsersIcon },
   { name: 'Отчеты', href: '/admin/reports', icon: ChartBarIcon },
   { name: 'Аудит', href: '/admin/audit', icon: ClipboardDocumentListIcon },
+  { name: 'Тест Greenleaf', href: '/test-greenleaf', icon: BeakerIcon },
   { name: 'Настройки', href: '/admin/settings', icon: CogIcon },
 ];
 

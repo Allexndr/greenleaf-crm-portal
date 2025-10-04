@@ -109,11 +109,27 @@ export async function PATCH(
         createdAt: new Date(),
       });
 
-      // If approved, try to create user in Greenleaf
+      // If approved, try to create user in Greenleaf using form filling
       if (status === ApplicationStatus.APPROVED) {
         try {
-          const { createGreenleafUser } = await import('@/lib/greenleaf-api');
-          const greenleafResult = await createGreenleafUser(mongoApplication, serviceCenter);
+          // Заполняем форму на сайте Greenleaf
+          const { fillGreenleafForm } = await import('@/lib/greenleaf-form-filler');
+          
+          const formData = {
+            sponsor: mongoApplication.sponsor,
+            placement: mongoApplication.placement,
+            firstName: mongoApplication.firstName,
+            lastName: mongoApplication.lastName,
+            idNumber: mongoApplication.idNumber,
+            email: mongoApplication.email,
+            phone: mongoApplication.phone,
+            placementArea: mongoApplication.placementArea,
+            serviceCenterLogin: 's240350',
+            serviceCenterPassword: '1982a',
+          };
+
+          console.log('Filling Greenleaf form for approved application...');
+          const greenleafResult = await fillGreenleafForm(formData);
 
           if (greenleafResult.success && greenleafResult.login) {
             // Update application with Greenleaf credentials
@@ -122,10 +138,12 @@ export async function PATCH(
               {
                 $set: {
                   greenleafLogin: greenleafResult.login,
-                  greenleafPassword: greenleafResult.password || process.env.DEFAULT_TEMP_PASSWORD || 'Aa12345',
+                  greenleafPassword: process.env.DEFAULT_TEMP_PASSWORD || 'Aa12345',
                 }
               }
             );
+            
+            console.log('Greenleaf form filled successfully, login generated:', greenleafResult.login);
           } else {
             // Mark as error if Greenleaf creation failed
             await db.collection('applications').updateOne(
