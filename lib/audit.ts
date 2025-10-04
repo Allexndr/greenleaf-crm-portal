@@ -1,296 +1,156 @@
-import { prisma } from './db';
-import { UserRole } from './types';
+import { connectToDatabase } from './mongodb';
+import { ObjectId } from 'mongodb';
 
-export interface AuditLogData {
+export interface AuditLogEntry {
+  _id?: ObjectId;
   userId: string;
+  userEmail: string;
   serviceCenterId?: string;
   action: string;
-  details?: any;
+  details?: string;
   ipAddress?: string;
   userAgent?: string;
+  createdAt: Date;
 }
 
-/**
- * Создать запись аудита
- */
-export async function createAuditLog(data: AuditLogData) {
-  try {
-    await prisma.auditLog.create({
-      data: {
-        userId: data.userId,
-        serviceCenterId: data.serviceCenterId,
-        action: data.action,
-        details: data.details ? JSON.stringify(data.details) : null,
-        ipAddress: data.ipAddress,
-        userAgent: data.userAgent,
-      },
-    });
-  } catch (error) {
-    console.error('Failed to create audit log:', error);
-  }
-}
-
-/**
- * Получить IP адрес из запроса
- */
-export function getClientIP(request: Request): string {
-  const forwarded = request.headers?.get('x-forwarded-for');
-  const realIP = request.headers?.get('x-real-ip');
-  
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-  
-  if (realIP) {
-    return realIP;
-  }
-  
-  return 'unknown';
-}
-
-/**
- * Получить User-Agent из запроса
- */
-export function getUserAgent(request: Request): string {
-  return request.headers?.get('user-agent') || 'unknown';
-}
-
-/**
- * Аудит действий пользователя
- */
 export class AuditLogger {
-  private userId: string;
-  private serviceCenterId?: string;
-  private ipAddress?: string;
-  private userAgent?: string;
-
-  constructor(userId: string, serviceCenterId?: string, ipAddress?: string, userAgent?: string) {
-    this.userId = userId;
-    this.serviceCenterId = serviceCenterId;
-    this.ipAddress = ipAddress;
-    this.userAgent = userAgent;
-  }
-
-  /**
-   * Логировать действие
-   */
-  async log(action: string, details?: any) {
-    await createAuditLog({
-      userId: this.userId,
-      serviceCenterId: this.serviceCenterId,
-      action,
-      details,
-      ipAddress: this.ipAddress,
-      userAgent: this.userAgent,
-    });
-  }
-
-  /**
-   * Логировать вход в систему
-   */
-  async logLogin(success: boolean, error?: string) {
-    await this.log('LOGIN', {
-      success,
-      error,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Логировать выход из системы
-   */
-  async logLogout() {
-    await this.log('LOGOUT', {
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Логировать создание сервисного центра
-   */
-  async logServiceCenterCreated(serviceCenterId: string, data: any) {
-    await this.log('SERVICE_CENTER_CREATED', {
-      serviceCenterId,
-      data,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Логировать обновление сервисного центра
-   */
-  async logServiceCenterUpdated(serviceCenterId: string, changes: any) {
-    await this.log('SERVICE_CENTER_UPDATED', {
-      serviceCenterId,
-      changes,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Логировать удаление сервисного центра
-   */
-  async logServiceCenterDeleted(serviceCenterId: string) {
-    await this.log('SERVICE_CENTER_DELETED', {
-      serviceCenterId,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Логировать создание пользователя
-   */
-  async logUserCreated(userId: string, userData: any) {
-    await this.log('USER_CREATED', {
-      userId,
-      userData: {
-        email: userData.email,
-        role: userData.role,
-        serviceCenterId: userData.serviceCenterId,
-      },
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Логировать обновление пользователя
-   */
-  async logUserUpdated(userId: string, changes: any) {
-    await this.log('USER_UPDATED', {
-      userId,
-      changes,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Логировать удаление пользователя
-   */
-  async logUserDeleted(userId: string) {
-    await this.log('USER_DELETED', {
-      userId,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Логировать изменение статуса заявки
-   */
-  async logApplicationStatusChanged(applicationId: string, oldStatus: string, newStatus: string, comment?: string) {
-    await this.log('APPLICATION_STATUS_CHANGED', {
-      applicationId,
-      oldStatus,
-      newStatus,
-      comment,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Логировать экспорт данных
-   */
-  async logDataExport(type: string, filters: any, recordCount: number) {
-    await this.log('DATA_EXPORT', {
-      type,
-      filters,
-      recordCount,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Логировать изменение пароля
-   */
-  async logPasswordChanged(userId: string) {
-    await this.log('PASSWORD_CHANGED', {
-      userId,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Логировать ошибку
-   */
-  async logError(error: string, details?: any) {
-    await this.log('ERROR', {
-      error,
-      details,
-      timestamp: new Date().toISOString(),
-    });
-  }
-}
-
-/**
- * Создать логгер аудита для пользователя
- */
-export function createAuditLogger(userId: string, serviceCenterId?: string, request?: Request): AuditLogger {
-  const ipAddress = request ? getClientIP(request) : undefined;
-  const userAgent = request ? getUserAgent(request) : undefined;
+  private static instance: AuditLogger;
   
-  return new AuditLogger(userId, serviceCenterId, ipAddress, userAgent);
-}
-
-/**
- * Получить статистику аудита
- */
-export async function getAuditStats(serviceCenterId?: string, startDate?: Date, endDate?: Date) {
-  const where: any = {};
+  private constructor() {}
   
-  if (serviceCenterId) {
-    where.serviceCenterId = serviceCenterId;
-  }
-  
-  if (startDate || endDate) {
-    where.createdAt = {};
-    if (startDate) {
-      where.createdAt.gte = startDate;
+  public static getInstance(): AuditLogger {
+    if (!AuditLogger.instance) {
+      AuditLogger.instance = new AuditLogger();
     }
-    if (endDate) {
-      where.createdAt.lte = endDate;
+    return AuditLogger.instance;
+  }
+
+  async log(
+    userId: string,
+    userEmail: string,
+    action: string,
+    details?: string,
+    serviceCenterId?: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    try {
+      const { db } = await connectToDatabase();
+      
+      const logEntry: AuditLogEntry = {
+        userId,
+        userEmail,
+      serviceCenterId,
+        action,
+        details,
+        ipAddress,
+        userAgent,
+        createdAt: new Date(),
+      };
+
+      await db.collection('auditLogs').insertOne(logEntry);
+    } catch (error) {
+      console.error('Failed to log audit entry:', error);
+      // Don't throw error to avoid breaking the main functionality
     }
   }
 
-  const [totalLogs, actionCounts, recentLogs] = await Promise.all([
-    prisma.auditLog.count({ where }),
-    prisma.auditLog.groupBy({
-      by: ['action'],
-      where,
-      _count: {
-        action: true,
-      },
-      orderBy: {
-        _count: {
-          action: 'desc',
-        },
-      },
-    }),
-    prisma.auditLog.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            email: true,
-            role: true,
-          },
-        },
-        serviceCenter: {
-          select: {
-            number: true,
-            description: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 50,
-    }),
-  ]);
+  async getLogs(
+    filters: {
+      userId?: string;
+      serviceCenterId?: string;
+      action?: string;
+      startDate?: Date;
+      endDate?: Date;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<AuditLogEntry[]> {
+    try {
+      const { db } = await connectToDatabase();
+      
+      const query: any = {};
+      
+      if (filters.userId) {
+        query.userId = filters.userId;
+      }
+      
+      if (filters.serviceCenterId) {
+        query.serviceCenterId = filters.serviceCenterId;
+      }
+      
+      if (filters.action) {
+        query.action = filters.action;
+      }
+      
+      if (filters.startDate || filters.endDate) {
+        query.createdAt = {};
+        if (filters.startDate) {
+          query.createdAt.$gte = filters.startDate;
+        }
+        if (filters.endDate) {
+          query.createdAt.$lte = filters.endDate;
+        }
+      }
 
-  return {
-    totalLogs,
-    actionCounts,
-    recentLogs,
-  };
+      const cursor = db.collection('auditLogs')
+        .find(query)
+        .sort({ createdAt: -1 });
+
+      if (filters.limit) {
+        cursor.limit(filters.limit);
+      }
+      
+      if (filters.offset) {
+        cursor.skip(filters.offset);
+      }
+
+      return await cursor.toArray();
+    } catch (error) {
+      console.error('Failed to fetch audit logs:', error);
+      return [];
+    }
+  }
+
+  async exportLogs(filters: any = {}): Promise<any[]> {
+    try {
+      const logs = await this.getLogs(filters);
+      
+      return logs.map(log => ({
+        Дата: log.createdAt.toLocaleDateString('ru-RU'),
+        Время: log.createdAt.toLocaleTimeString('ru-RU'),
+        Пользователь: log.userEmail,
+        Действие: log.action,
+        Детали: log.details || '',
+        'Сервисный центр': log.serviceCenterId || '',
+        IP: log.ipAddress || '',
+      }));
+    } catch (error) {
+      console.error('Failed to export audit logs:', error);
+      return [];
+    }
+  }
 }
 
+// Predefined action types
+export const AuditActions = {
+  LOGIN: 'LOGIN',
+  LOGOUT: 'LOGOUT',
+  CREATE_SERVICE_CENTER: 'CREATE_SERVICE_CENTER',
+  UPDATE_SERVICE_CENTER: 'UPDATE_SERVICE_CENTER',
+  DELETE_SERVICE_CENTER: 'DELETE_SERVICE_CENTER',
+  CREATE_USER: 'CREATE_USER',
+  UPDATE_USER: 'UPDATE_USER',
+  DELETE_USER: 'DELETE_USER',
+  RESET_PASSWORD: 'RESET_PASSWORD',
+  APPROVE_APPLICATION: 'APPROVE_APPLICATION',
+  REJECT_APPLICATION: 'REJECT_APPLICATION',
+  UPDATE_APPLICATION_STATUS: 'UPDATE_APPLICATION_STATUS',
+  EXPORT_DATA: 'EXPORT_DATA',
+  UPDATE_GREENLEAF_CREDENTIALS: 'UPDATE_GREENLEAF_CREDENTIALS',
+} as const;
+
+export type AuditAction = typeof AuditActions[keyof typeof AuditActions];
+
+// Helper function to get audit logger instance
+export const getAuditLogger = () => AuditLogger.getInstance();

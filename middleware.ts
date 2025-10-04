@@ -26,14 +26,14 @@ export function middleware(request: NextRequest) {
 
   // Check if the route requires authentication
   if (adminRoutes.some(route => pathname.startsWith(route))) {
-    if (!token) {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
-    }
+        if (!token) {
+          return NextResponse.redirect(new URL('/admin-auth/login', request.url));
+        }
 
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
-    }
+        const payload = verifyToken(token);
+        if (!payload) {
+          return NextResponse.redirect(new URL('/admin-auth/login', request.url));
+        }
 
     // Add user info to headers for API routes
     const requestHeaders = new Headers(request.headers);

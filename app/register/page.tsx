@@ -24,7 +24,8 @@ const registrationSchema = z.object({
   idNumber: z.string().min(1, 'Номер удостоверения обязателен'),
   placementArea: z.nativeEnum(PlacementArea, { required_error: 'Выберите область размещения' }),
   paymentMethod: z.nativeEnum(PaymentMethod, { required_error: 'Выберите способ оплаты' }),
-  paymentReceipt: z.string().optional(),
+  paymentReceipt: z.any().optional(),
+  starterKit: z.string().min(1, 'Выберите стартовый набор'),
   consent: z.boolean().refine(val => val === true, 'Необходимо согласие на обработку данных'),
 });
 
@@ -55,6 +56,7 @@ export default function RegisterPage() {
     resolver: zodResolver(registrationSchema),
     defaultValues: {
       placementArea: PlacementArea.AUTO,
+      starterKit: 'A003',
       consent: false,
     },
   });
@@ -158,18 +160,19 @@ export default function RegisterPage() {
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 sm:py-6 gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                 Регистрация нового пользователя
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600 mt-1 text-sm sm:text-base">
                 Сервисный центр {serviceCenter.number} • {serviceCenter.address}
               </p>
             </div>
             <Button
               variant="outline"
               onClick={() => router.push(`/?sc=${serviceCenterId}`)}
+              className="w-full sm:w-auto"
             >
               Назад
             </Button>
@@ -277,17 +280,32 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="idNumber">Номер удостоверения *</Label>
-                <Input
-                  id="idNumber"
-                  {...register('idNumber')}
-                  placeholder="Введите номер удостоверения"
-                  error={!!errors.idNumber}
-                />
-                {errors.idNumber && (
-                  <p className="error-message">{errors.idNumber.message}</p>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="idNumber">Серия паспорта *</Label>
+                  <Input
+                    id="idNumber"
+                    {...register('idNumber')}
+                    placeholder="Введите серию паспорта"
+                    error={!!errors.idNumber}
+                  />
+                  {errors.idNumber && (
+                    <p className="error-message">{errors.idNumber.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="idNumber2">Номер паспорта *</Label>
+                  <Input
+                    id="idNumber2"
+                    {...register('idNumber')}
+                    placeholder="Введите номер паспорта"
+                    error={!!errors.idNumber}
+                  />
+                  {errors.idNumber && (
+                    <p className="error-message">{errors.idNumber.message}</p>
+                  )}
+                </div>
               </div>
 
               {/* Placement Area */}
@@ -340,16 +358,48 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              {paymentMethod === PaymentMethod.CASH && (
-                <div>
-                  <Label htmlFor="paymentReceipt">Чек об оплате</Label>
-                  <Input
-                    id="paymentReceipt"
-                    {...register('paymentReceipt')}
-                    placeholder="Описание чека или ссылка на фото"
-                  />
+              {/* Payment Receipt Upload */}
+              <div>
+                <Label htmlFor="paymentReceipt">Чек об оплате *</Label>
+                <Input
+                  id="paymentReceipt"
+                  type="file"
+                  accept="image/*,.pdf"
+                  {...register('paymentReceipt')}
+                  className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Загрузите фото или PDF чека об оплате стартового набора
+                </p>
+              </div>
+
+              {/* Starter Kit Selection */}
+              <div>
+                <Label>Стартовый набор *</Label>
+                <div className="mt-2 space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="A003"
+                      {...register('starterKit')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Набор Lucky (с кремом) A003</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="A004"
+                      {...register('starterKit')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Набор Lucky (с кремом) A004</span>
+                  </label>
                 </div>
-              )}
+                {errors.starterKit && (
+                  <p className="error-message">{errors.starterKit.message}</p>
+                )}
+              </div>
 
               {/* Consent */}
               <div>

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { createApiResponse, createErrorResponse, getCurrentUser, validateRequiredFields } from '@/lib/api-helpers';
 import { verifyToken } from '@/lib/auth';
 import { generateUniqueLink } from '@/lib/utils';
-import { createAuditLogger, getClientIP, getUserAgent } from '@/lib/audit';
+import { getAuditLogger, AuditActions } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 

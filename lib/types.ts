@@ -65,6 +65,7 @@ export interface Application {
   placementArea: string;
   paymentMethod: string;
   paymentReceipt?: string;
+  starterKit: string;
   status: string;
   rejectionReason?: string;
   greenleafLogin?: string;

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createApiResponse, createErrorResponse, validateRequiredFields, validateEmail } from '@/lib/api-helpers';
 import { verifyPassword, generateToken } from '@/lib/auth';
-import { createAuditLogger, getClientIP, getUserAgent } from '@/lib/audit';
+import { getAuditLogger, AuditActions } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,8 +98,16 @@ export async function POST(request: NextRequest) {
     if (!isValidPassword) {
       // Log failed login attempt
       try {
-        const auditLogger = createAuditLogger('unknown', undefined, request);
-        await auditLogger.logLogin(false, 'Invalid password');
+        const auditLogger = getAuditLogger();
+        await auditLogger.log(
+          'unknown',
+          body.email,
+          AuditActions.LOGIN,
+          'Failed login attempt - invalid password',
+          undefined,
+          request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+          request.headers.get('user-agent') || 'unknown'
+        );
       } catch (auditError) {
         console.warn('Audit logging failed:', auditError);
       }
@@ -117,8 +125,16 @@ export async function POST(request: NextRequest) {
 
     // Log successful login
     try {
-      const auditLogger = createAuditLogger(user.id, user.serviceCenterId || undefined, request);
-      await auditLogger.logLogin(true);
+      const auditLogger = getAuditLogger();
+      await auditLogger.log(
+        user.id,
+        user.email,
+        AuditActions.LOGIN,
+        'Successful login',
+        user.serviceCenterId,
+        request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        request.headers.get('user-agent') || 'unknown'
+      );
     } catch (auditError) {
       console.warn('Audit logging failed:', auditError);
     }
@@ -136,7 +152,7 @@ export async function POST(request: NextRequest) {
     // Set cookie
     response.headers.set(
       'Set-Cookie',
-      `auth-token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=None; Secure=false`
+      `auth-token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax; Secure=false`
     );
 
     return response;

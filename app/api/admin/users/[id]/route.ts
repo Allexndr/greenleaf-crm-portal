@@ -4,7 +4,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { createApiResponse, createErrorResponse, getCurrentUser, validateEmail } from '@/lib/api-helpers';
 import { hashPassword, verifyToken } from '@/lib/auth';
 import { UserRole } from '@/lib/types';
-import { createAuditLogger, getClientIP, getUserAgent } from '@/lib/audit';
+import { getAuditLogger, AuditActions } from '@/lib/audit';
 import { ObjectId } from 'mongodb';
 
 export const dynamic = 'force-dynamic';

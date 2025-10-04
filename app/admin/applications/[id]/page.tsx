@@ -227,9 +227,18 @@ export default function ApplicationDetailPage() {
               </div>
               {application.paymentReceipt && (
                 <div>
-                  <Label>Чек об оплате</Label>
+                  <Label>Превью чека об оплате</Label>
                   <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                    <p className="text-sm text-gray-700">{application.paymentReceipt}</p>
+                    {application.paymentReceipt.startsWith('data:') ? (
+                      <img 
+                        src={application.paymentReceipt} 
+                        alt="Чек об оплате" 
+                        className="max-w-full h-auto rounded border"
+                        style={{ maxHeight: '300px' }}
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-700">{application.paymentReceipt}</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -295,6 +304,14 @@ export default function ApplicationDetailPage() {
                   Взять на рассмотрение
                 </Button>
                 <Button
+                  onClick={() => handleStatusChange(ApplicationStatus.APPROVED, 'Заявка утверждена')}
+                  disabled={actionLoading}
+                  className="w-full btn-success"
+                >
+                  <CheckIcon className="h-4 w-4 mr-2" />
+                  Подтвердить
+                </Button>
+                <Button
                   onClick={() => setShowRejectionForm(true)}
                   disabled={actionLoading}
                   variant="danger"
@@ -302,6 +319,15 @@ export default function ApplicationDetailPage() {
                 >
                   <XMarkIcon className="h-4 w-4 mr-2" />
                   Отклонить
+                </Button>
+                <Button
+                  onClick={() => {/* TODO: Implement request additional data */}}
+                  disabled={actionLoading}
+                  variant="secondary"
+                  className="w-full"
+                >
+                  <ExclamationTriangleIcon className="h-4 w-4 mr-2" />
+                  Запросить доп. данные
                 </Button>
               </CardContent>
             </Card>

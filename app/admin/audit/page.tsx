@@ -4,59 +4,56 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { formatDate } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
 import { MagnifyingGlassIcon, FunnelIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 interface AuditLog {
-  id: string;
+  _id: string;
+  userId: string;
+  userEmail: string;
+  serviceCenterId?: string;
   action: string;
   details?: string;
   ipAddress?: string;
   userAgent?: string;
   createdAt: string;
-  user: {
-    email: string;
-    role: string;
-  };
-  serviceCenter?: {
-    number: string;
-    description: string;
-  };
 }
 
-interface AuditStats {
-  totalLogs: number;
-  actionCounts: Array<{
-    action: string;
-    _count: {
-      action: number;
-    };
-  }>;
-  recentLogs: AuditLog[];
-}
+const auditActions = [
+  'LOGIN',
+  'LOGOUT',
+  'CREATE_SERVICE_CENTER',
+  'UPDATE_SERVICE_CENTER',
+  'DELETE_SERVICE_CENTER',
+  'CREATE_USER',
+  'UPDATE_USER',
+  'DELETE_USER',
+  'RESET_PASSWORD',
+  'APPROVE_APPLICATION',
+  'REJECT_APPLICATION',
+  'UPDATE_APPLICATION_STATUS',
+  'EXPORT_DATA',
+  'UPDATE_GREENLEAF_CREDENTIALS',
+];
 
 export default function AuditPage() {
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [stats, setStats] = useState<AuditStats | null>(null);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
-    action: '',
     userId: '',
     serviceCenterId: '',
+    action: '',
     startDate: '',
     endDate: '',
-    search: '',
   });
 
   useEffect(() => {
-    fetchAuditLogs();
-    fetchAuditStats();
-  }, [filters]);
+    fetchLogs();
+  }, []);
 
-  const fetchAuditLogs = async () => {
+  const fetchLogs = async () => {
     setLoading(true);
     try {
       const query = new URLSearchParams(filters).toString();
@@ -65,24 +62,11 @@ export default function AuditPage() {
         throw new Error('Failed to fetch audit logs');
       }
       const data = await response.json();
-      setAuditLogs(data.auditLogs || []);
+      setLogs(data.logs || []);
     } catch (error: any) {
-      toast.error(error.message || 'Ошибка при загрузке логов аудита');
+      toast.error(error.message || 'Ошибка при загрузке журнала аудита');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchAuditStats = async () => {
-    try {
-      const response = await fetch('/api/admin/audit/stats');
-      if (!response.ok) {
-        throw new Error('Failed to fetch audit stats');
-      }
-      const data = await response.json();
-      setStats(data);
-    } catch (error: any) {
-      console.error('Error fetching audit stats:', error);
     }
   };
 
@@ -102,221 +86,162 @@ export default function AuditPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `audit_logs_${formatDate(new Date(), 'YYYY-MM-DD')}.xlsx`;
+      a.download = `audit_logs_${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Данные успешно экспортированы');
+      toast.success('Журнал аудита успешно экспортирован');
     } catch (error: any) {
-      toast.error(error.message || 'Ошибка при экспорте данных');
+      toast.error(error.message || 'Ошибка при экспорте журнала аудита');
     }
   };
 
   const getActionLabel = (action: string): string => {
-    const actionLabels: { [key: string]: string } = {
-      'LOGIN': 'Вход в систему',
-      'LOGOUT': 'Выход из системы',
-      'SERVICE_CENTER_CREATED': 'Создание сервисного центра',
-      'SERVICE_CENTER_UPDATED': 'Обновление сервисного центра',
-      'SERVICE_CENTER_DELETED': 'Удаление сервисного центра',
-      'USER_CREATED': 'Создание пользователя',
-      'USER_UPDATED': 'Обновление пользователя',
-      'USER_DELETED': 'Удаление пользователя',
-      'APPLICATION_STATUS_CHANGED': 'Изменение статуса заявки',
-      'DATA_EXPORT': 'Экспорт данных',
-      'PASSWORD_CHANGED': 'Изменение пароля',
-      'ERROR': 'Ошибка',
+    const labels: { [key: string]: string } = {
+      LOGIN: 'Вход в систему',
+      LOGOUT: 'Выход из системы',
+      CREATE_SERVICE_CENTER: 'Создание сервисного центра',
+      UPDATE_SERVICE_CENTER: 'Обновление сервисного центра',
+      DELETE_SERVICE_CENTER: 'Удаление сервисного центра',
+      CREATE_USER: 'Создание пользователя',
+      UPDATE_USER: 'Обновление пользователя',
+      DELETE_USER: 'Удаление пользователя',
+      RESET_PASSWORD: 'Сброс пароля',
+      APPROVE_APPLICATION: 'Утверждение заявки',
+      REJECT_APPLICATION: 'Отклонение заявки',
+      UPDATE_APPLICATION_STATUS: 'Изменение статуса заявки',
+      EXPORT_DATA: 'Экспорт данных',
+      UPDATE_GREENLEAF_CREDENTIALS: 'Обновление учетных данных Greenleaf',
     };
-    return actionLabels[action] || action;
-  };
-
-  const getActionColor = (action: string): string => {
-    if (action.includes('ERROR')) return 'text-red-600';
-    if (action.includes('LOGIN') || action.includes('LOGOUT')) return 'text-blue-600';
-    if (action.includes('CREATED')) return 'text-green-600';
-    if (action.includes('UPDATED')) return 'text-yellow-600';
-    if (action.includes('DELETED')) return 'text-red-600';
-    return 'text-gray-600';
+    return labels[action] || action;
   };
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Аудит системы</h1>
+      <h1 className="text-3xl font-bold text-gray-900">Журнал аудита</h1>
 
-      {/* Statistics */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <h3 className="text-sm font-medium text-gray-600">Всего записей</h3>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
-                {stats.totalLogs.toLocaleString()}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <h3 className="text-sm font-medium text-gray-600">Топ действий</h3>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-1">
-                {stats.actionCounts.slice(0, 3).map((item) => (
-                  <div key={item.action} className="flex justify-between text-sm">
-                    <span className="text-gray-600">{getActionLabel(item.action)}</span>
-                    <span className="font-medium">{item._count.action}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <h3 className="text-sm font-medium text-gray-600">Последние 24ч</h3>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
-                {stats.recentLogs.filter(log => {
-                  const logDate = new Date(log.createdAt);
-                  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-                  return logDate > yesterday;
-                }).length}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <h3 className="text-sm font-medium text-gray-600">Ошибки</h3>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {stats.actionCounts.find(item => item.action === 'ERROR')?._count.action || 0}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Filters */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FunnelIcon className="h-5 w-5 text-gray-500" /> Фильтры
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <Label htmlFor="userId">Пользователь ID</Label>
+            <Input
+              id="userId"
+              name="userId"
+              value={filters.userId}
+              onChange={handleFilterChange}
+              placeholder="ID пользователя"
+            />
+          </div>
+          <div>
+            <Label htmlFor="serviceCenterId">Сервисный центр ID</Label>
+            <Input
+              id="serviceCenterId"
+              name="serviceCenterId"
+              value={filters.serviceCenterId}
+              onChange={handleFilterChange}
+              placeholder="ID сервисного центра"
+            />
+          </div>
           <div>
             <Label htmlFor="action">Действие</Label>
             <Select id="action" name="action" value={filters.action} onChange={handleFilterChange}>
               <option value="">Все</option>
-              <option value="LOGIN">Вход в систему</option>
-              <option value="LOGOUT">Выход из системы</option>
-              <option value="SERVICE_CENTER_CREATED">Создание сервисного центра</option>
-              <option value="SERVICE_CENTER_UPDATED">Обновление сервисного центра</option>
-              <option value="USER_CREATED">Создание пользователя</option>
-              <option value="USER_UPDATED">Обновление пользователя</option>
-              <option value="APPLICATION_STATUS_CHANGED">Изменение статуса заявки</option>
-              <option value="DATA_EXPORT">Экспорт данных</option>
-              <option value="ERROR">Ошибки</option>
+              {auditActions.map((action) => (
+                <option key={action} value={action}>
+                  {getActionLabel(action)}
+                </option>
+              ))}
             </Select>
           </div>
-
-          <div>
-            <Label htmlFor="search">Поиск</Label>
-            <Input
-              id="search"
-              name="search"
-              value={filters.search}
-              onChange={handleFilterChange}
-              placeholder="Поиск по деталям..."
-            />
-          </div>
-
           <div>
             <Label htmlFor="startDate">Дата от</Label>
             <Input type="date" id="startDate" name="startDate" value={filters.startDate} onChange={handleFilterChange} />
           </div>
-
           <div>
             <Label htmlFor="endDate">Дата до</Label>
             <Input type="date" id="endDate" name="endDate" value={filters.endDate} onChange={handleFilterChange} />
           </div>
-
           <div className="flex items-end gap-2">
-            <Button onClick={() => setFilters({ action: '', userId: '', serviceCenterId: '', startDate: '', endDate: '', search: '' })} variant="secondary">
+            <Button onClick={() => setFilters({ userId: '', serviceCenterId: '', action: '', startDate: '', endDate: '' })} variant="secondary">
               Сбросить
             </Button>
-            <Button onClick={fetchAuditLogs}>
+            <Button onClick={fetchLogs}>
               <MagnifyingGlassIcon className="h-5 w-5 mr-2" /> Применить
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Audit Logs */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-2xl font-bold">Журнал аудита</CardTitle>
+          <CardTitle className="text-2xl font-bold">Журнал действий</CardTitle>
           <Button onClick={handleExport} variant="outline">
-            <ArrowDownTrayIcon className="h-5 w-5 mr-2" /> Экспорт
+            <ArrowDownTrayIcon className="h-5 w-5 mr-2" /> Экспорт в XLSX
           </Button>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8">Загрузка логов...</div>
-          ) : auditLogs.length === 0 ? (
+            <div className="text-center py-8">Загрузка журнала...</div>
+          ) : logs.length === 0 ? (
             <div className="text-center py-8 text-gray-500">Записи не найдены.</div>
           ) : (
-            <div className="space-y-4">
-              {auditLogs && Array.isArray(auditLogs) ? auditLogs.map((log) => (
-                <div key={log.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`font-medium ${getActionColor(log.action)}`}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Дата/Время
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Пользователь
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Действие
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Детали
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Сервисный центр
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      IP адрес
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {logs.map((log) => (
+                    <tr key={log._id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(log.createdAt).toLocaleString('ru-RU')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {log.userEmail}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                           {getActionLabel(log.action)}
                         </span>
-                        <span className="text-sm text-gray-500">
-                          {formatDate(new Date(log.createdAt), 'DD.MM.YYYY HH:mm:ss')}
-                        </span>
-                      </div>
-                      
-                      <div className="text-sm text-gray-600 mb-2">
-                        <span className="font-medium">Пользователь:</span> {log.user.email} ({log.user.role})
-                        {log.serviceCenter && (
-                          <span className="ml-4">
-                            <span className="font-medium">Центр:</span> {log.serviceCenter.number} - {log.serviceCenter.description}
-                          </span>
-                        )}
-                      </div>
-
-                      {log.details && (
-                        <div className="text-sm text-gray-700 bg-gray-50 p-2 rounded">
-                          <pre className="whitespace-pre-wrap">{log.details}</pre>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                        {log.ipAddress && (
-                          <span>IP: {log.ipAddress}</span>
-                        )}
-                        {log.userAgent && (
-                          <span className="truncate max-w-xs">UA: {log.userAgent}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )) : (
-                <div className="text-center py-8 text-gray-500">
-                  Загрузка данных...
-                </div>
-              )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                        {log.details || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {log.serviceCenterId || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {log.ipAddress || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
@@ -324,4 +249,3 @@ export default function AuditPage() {
     </div>
   );
 }
-

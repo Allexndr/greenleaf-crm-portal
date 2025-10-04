@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 interface ServiceCenter {
@@ -252,6 +252,12 @@ export default function ServiceCentersPage() {
                       Ссылка
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Дата создания
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Последнее обновление
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Статистика
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -285,6 +291,12 @@ export default function ServiceCentersPage() {
                         </a>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(center.createdAt).toLocaleDateString('ru-RU')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(center.updatedAt).toLocaleDateString('ru-RU')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="space-y-1">
                           <div>Заявок: {center._count.applications}</div>
                           <div>Пользователей: {center._count.users}</div>
@@ -304,12 +316,28 @@ export default function ServiceCentersPage() {
                           <button
                             onClick={() => handleEdit(center)}
                             className="text-primary-600 hover:text-primary-900"
+                            title="Редактировать"
                           >
                             <PencilIcon className="h-4 w-4" />
                           </button>
                           <button
+                            onClick={() => {/* TODO: Implement regenerate link */}}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Пере-сгенерировать ссылку"
+                          >
+                            <ArrowPathIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => {/* TODO: Implement deactivate */}}
+                            className="text-yellow-600 hover:text-yellow-900"
+                            title="Деактивировать"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => handleDelete(center.id)}
                             className="text-red-600 hover:text-red-900"
+                            title="Удалить"
                           >
                             <TrashIcon className="h-4 w-4" />
                           </button>

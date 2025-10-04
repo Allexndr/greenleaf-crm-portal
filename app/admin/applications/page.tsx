@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ApplicationStatus, getStatusLabel, PaymentMethod, getPaymentMethodLabel } from '@/lib/types';
+import { ApplicationStatus, getStatusLabel, PaymentMethod, getPaymentMethodLabel, getTrustColor } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 import { MagnifyingGlassIcon, FunnelIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
@@ -252,6 +252,9 @@ export default function ApplicationsManagementPage() {
                       Способ оплаты
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Цвет доверия
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Статус
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -287,6 +290,20 @@ export default function ApplicationsManagementPage() {
                         {getPaymentMethodLabel(app.paymentMethod)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {(() => {
+                          const trustColor = getTrustColor(app.paymentMethod);
+                          return (
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              trustColor.color === 'green' ? 'bg-green-100 text-green-800' :
+                              trustColor.color === 'orange' ? 'bg-orange-100 text-orange-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {trustColor.label}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           app.status === ApplicationStatus.APPROVED ? 'bg-green-100 text-green-800' :
                           app.status === ApplicationStatus.REJECTED ? 'bg-red-100 text-red-800' :
@@ -313,7 +330,7 @@ export default function ApplicationsManagementPage() {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={10} className="px-6 py-4 text-center text-gray-500">
                         Загрузка данных...
                       </td>
                     </tr>

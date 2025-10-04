@@ -25,23 +25,27 @@ const navigation = [
   { name: 'Настройки', href: '/admin/settings', icon: CogIcon },
 ];
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <>
       {/* Mobile sidebar */}
       <div className={cn(
         'fixed inset-0 z-50 lg:hidden',
-        sidebarOpen ? 'block' : 'hidden'
+        isOpen ? 'block' : 'hidden'
       )}>
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={onClose} />
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white">
           <div className="flex h-16 items-center justify-between px-4">
             <h1 className="text-xl font-bold text-gray-900">Greenleaf Admin</h1>
             <button
-              onClick={() => setSidebarOpen(false)}
+              onClick={onClose}
               className="text-gray-400 hover:text-gray-600"
             >
               <span className="sr-only">Close sidebar</span>

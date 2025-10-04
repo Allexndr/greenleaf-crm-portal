@@ -64,7 +64,8 @@ export default function StatusPage() {
   useEffect(() => {
     if (applicationNumber && serviceCenterId) {
       setValue('applicationNumber', applicationNumber);
-      checkStatus({ applicationNumber, phone: '' });
+      // Show message that phone number is required
+      toast.info('Введите номер телефона для проверки статуса заявки');
     }
   }, [applicationNumber, serviceCenterId, setValue]);
 
